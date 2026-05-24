@@ -14,7 +14,7 @@ services:
       PUID: 1001
       PGID: 1001
     networks:
-       - redinterna                    # Usa red docker externa
+       - redinterna                    # Usa red docker
 
   dockerproxy:
     image: ghcr.io/tecnativa/docker-socket-proxy:latest
