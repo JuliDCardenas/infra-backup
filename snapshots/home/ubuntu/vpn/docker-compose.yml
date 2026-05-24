@@ -1,0 +1,53 @@
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000  # ls -l para tu UID/GID
+      - PGID=1000
+      - TZ=America/Bogota
+      - SERVERURL=157.137.188.70  # auto si detecta
+      - SERVERPORT=51820
+      - PEERS=5  # 1 por dispositivo (cel tú, tablet, PC, pareja...)
+      - PEERDNS=auto
+      - INTERNAL_SUBNET=10.13.13.0/24
+      - ALLOWEDIPS=0.0.0.0/0,::/0  # Todo tráfico por VPN
+      - LOG_CONFS=true  # Muestra QR en logs
+    volumes:
+      - ./config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+      - 9091:9090
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      - redinterna
+ 
+  prometheus_vpn:
+    image: prom/prometheus:latest
+    container_name: prometheus_vpn
+    network_mode: "service:wireguard"
+    depends_on:
+      - wireguard
+    volumes:
+      - ./prometheus_vpn.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_vpn_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+
+
+volumes:
+  prometheus_vpn_data:
+
+
+    
+networks:
+  redinterna:
+    external: true
