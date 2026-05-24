@@ -1,0 +1,37 @@
+version: "3"
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - 3001:3000
+    volumes:
+      - /srv/homepage/config:/app/config
+      # - /var/run/docker.sock:/var/run/docker.sock  # Para integración con Docker
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: julidcardenas.site  # Cambia al dominio/subdominio que usarás
+      PUID: 1001
+      PGID: 1001
+    networks:
+       - redinterna                    # Usa red docker externa
+
+  dockerproxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    container_name: dockerproxy
+    # Variables de entorno para restringir el acceso:
+    environment:
+      - CONTAINERS=1 # Permite ver contenedores (Homepage necesita esto)
+      - SERVICES=1   # Permite ver servicios (si usas Docker Swarm)
+      - POST=0       # ¡CLAVE! Bloquea todas las operaciones de escritura (solo lectura)
+    volumes:
+      # Monta el socket de Docker en el proxy (solo lectura)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    # Define en qué red de Docker quiero que esté el proxy y Homepage
+    networks:
+      - redinterna
+
+networks:
+  redinterna:
+    external: true
