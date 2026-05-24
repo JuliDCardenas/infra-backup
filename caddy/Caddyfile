@@ -1,0 +1,153 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# Unless the file starts with a global options block, the first
+# uncommented line is always the address of your site.
+#
+# To use your own domain name (with automatic HTTPS), first make
+# sure your domain's A/AAAA DNS records are properly pointed to
+# this machine's public IP, then replace ":80" below with your
+# domain name.
+
+#:80 {
+# Set this path to your site's directory.
+#	root * /usr/share/caddy
+
+# Enable the static file server.
+#	file_server
+
+# Another common task is to set up a reverse proxy:
+# reverse_proxy localhost:8080
+
+#        reverse_proxy localhost:5678
+
+# Or serve a PHP site through php-fpm:
+# php_fastcgi localhost:9000
+#}
+{
+	email juliandario140620@gmail.com ## Define el email para todos los certificados Let's Encrypt
+	admin 172.22.0.1:2019
+	servers {
+		metrics
+	}
+}
+
+n8n.julidcardenas.site {
+	reverse_proxy localhost:5678 {
+		flush_interval -1
+	}
+	#tls juliandario140620@gmail.com
+}
+
+automatizacion.julidcardenas.site {
+	reverse_proxy localhost:5678 {
+		flush_interval -1
+	}
+	#tls juliandario140620@gmail.com
+}
+
+grafana.julidcardenas.site {
+	reverse_proxy localhost:3000
+	#tls juliandario140620@gmail.com
+}
+
+monitor.julidcardenas.site {
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+
+	reverse_proxy localhost:3000
+}
+
+prometheus.julidcardenas.site {
+	reverse_proxy localhost:9090
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+cadvisor.julidcardenas.site {
+	reverse_proxy localhost:8080
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+julidcardenas.site {
+	reverse_proxy localhost:3001
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+ollama.julidcardenas.site {
+	reverse_proxy localhost:3002
+}
+
+codeserver.julidcardenas.site {
+	reverse_proxy localhost:8443
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+redis.julidcardenas.site {
+	reverse_proxy localhost:8081
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+traccar.julidcardenas.site {
+	reverse_proxy localhost:8083
+}
+
+mqtt.julidcardenas.site {
+	respond "ok"
+}
+
+mqttpg.julidcardenas.site {
+    reverse_proxy 127.0.0.1:8084
+    basic_auth {
+        julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+     }
+}
+
+evolution.julidcardenas.site {
+	# Soporte completo para WebSockets
+	reverse_proxy localhost:8082 {
+		# Headers necesarios para WebSocket
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		# Timeout largo para WebSockets (importante para QR)
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+			dial_timeout 30s
+		}
+	}
+
+	# Headers de seguridad
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		# NO agregar Content-Security-Policy que bloquee WebSockets
+	}
+
+	# Logs para debugging
+	log {
+		output file /var/log/caddy/evolution.log
+		format json
+	}
+
+	#reverse_proxy localhost:8082
+	basic_auth {
+		julidcardenas $2a$14$YTr2W00jndtahwohZRdDv.6oXVZrFTbvbK1T91EmBdZpXaz61sPhS
+	}
+}
+
+# Refer to the Caddy docs for more information:
+# https://caddyserver.com/docs/caddyfile
