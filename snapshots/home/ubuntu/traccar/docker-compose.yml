@@ -1,0 +1,43 @@
+services:
+  traccar-postgres:
+    image: postgres:16
+    container_name: traccar-postgres
+    environment:
+      POSTGRES_DB: traccardb
+      POSTGRES_USER: traccar
+      POSTGRES_PASSWORD: ${TRACCAR_DB_PASSWORD}
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    networks:
+      - redinterna
+    restart: unless-stopped
+
+  traccar:
+    image: traccar/traccar:latest
+    container_name: traccar
+    depends_on:
+      - traccar-postgres
+    # NO puerto 8082 - usa Caddy
+    # Solo puertos GPS que uses (ejemplo para Osmand):
+    ports:
+      - "8083:8082"
+      #- "5055:5055"      # Osmand TCP
+      #- "5055:5055/udp"  # Osmand UDP
+      - "5013:5013/tcp"     # Protocolo H02 para el prototipo
+      #- "5027:5027/tcp"     # Protocolo Teltonika a futuro
+      #- "5000-5300:5000-5300"      # TCP protocolos GPS
+      #- "5000-5300:5000-5300/udp"  # UDP protocolos GPS
+    volumes:
+      - ./logs:/opt/traccar/logs
+      - ./data:/opt/traccar/data
+      - ./conf/traccar.xml:/opt/traccar/conf/traccar.xml:ro
+    environment:
+      - TRACCAR_ADMIN_EMAIL=${TRACCAR_ADMIN_EMAIL}
+      - TRACCAR_ADMIN_PASS=${TRACCAR_ADMIN_PASS}
+    networks:
+      - redinterna
+    restart: unless-stopped
+
+networks:
+  redinterna:
+    external: true
