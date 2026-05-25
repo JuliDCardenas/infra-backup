@@ -1,0 +1,61 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "8883:8883"
+    volumes:
+      - /opt/mosquitto/config:/mosquitto/config:ro
+      - /opt/mosquitto/data:/mosquitto/data
+      - /opt/mosquitto/log:/mosquitto/log
+      - /opt/mosquitto/secrets:/mosquitto/secrets:ro
+      - /opt/mosquitto/certs:/mosquitto/certs:ro
+    networks:
+      - mqtt_net
+
+  mqtt-postgres:
+    image: postgres:16
+    container_name: mqtt-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-America/Bogota}
+    volumes:
+      - mqtt_pg_data:/var/lib/postgresql/data
+    # No expongas puertos a la máquina host (más seguro)
+    # ports:
+    #   - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mqtt_net
+
+  adminer:
+    image: adminer:4
+    container_name: mqtt-adminer
+    restart: unless-stopped
+    environment:
+      # Opcional: fija el server por defecto en la UI
+      ADMINER_DEFAULT_SERVER: mqtt-postgres
+    ports:
+      # Publica Adminer SOLO en localhost; Caddy (en el host) hace reverse_proxy a localhost:8081
+      - "127.0.0.1:8084:8080"
+    depends_on:
+      - mqtt-postgres
+    networks:
+      - mqtt_net
+
+volumes:
+  mqtt_pg_data:
+
+networks:
+  mqtt_net:
+    driver: bridge
