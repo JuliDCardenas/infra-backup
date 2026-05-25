@@ -15,7 +15,8 @@ services:
       - mqtt_net
 
   mqtt-postgres:
-    image: postgres:16
+    ## image: postgres:16      ## Solo BD Postgres sin timescaleDB
+    image: timescale/timescaledb:latest-pg16    ## Postgres 16 con timescaledb
     container_name: mqtt-postgres
     restart: unless-stopped
     env_file:
