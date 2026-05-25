@@ -3,10 +3,16 @@ set -euo pipefail
 
 REPO="$HOME/infra-backup"
 SRC="${1:-}"
+MSG="${2:-}"
 
 if [[ -z "$SRC" ]]; then
   echo "Uso: $0 /ruta/al/archivo"
   exit 1
+fi
+
+# Si SRC es relativo, convertirlo a absoluto desde el directorio actual
+if [[ "$SRC" != /* ]]; then
+  SRC="$(pwd)/$SRC"
 fi
 
 if [[ ! -f "$SRC" ]]; then
@@ -26,10 +32,18 @@ sudo chown -R "$USER:$USER" "$REPO" >/dev/null 2>&1 || true
 
 cd "$REPO"
 
-# OJO: si el archivo aún no está trackeado, esto lo marca como "cambio"
-if git diff --quiet -- "$DST" 2>/dev/null; then
+# Si es nuevo (untracked) o está modificado, hay que commitear
+if git status --porcelain -- "$DST" | grep -q .; then
+  git add "$DST"
+  if [[ -n "$MSG" ]]; then
+    git commit -m "$MSG"
+  else
+    git commit -m "Backup $(basename "$SRC") $(date +'%F %T')"
+  fi
+  git push
+  echo "OK: $SRC -> $DST"
+else
   echo "Sin cambios: $SRC"
-  exit 0
 fi
 
 git add "$DST"
