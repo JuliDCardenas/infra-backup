@@ -82,34 +82,7 @@ services:
     depends_on:
       - mqtt-postgres
     networks:
-      - mqtt_netmqtt-subscriber:
-        build: ./subscriber
-        container_name: mqtt-subscriber
-        restart: unless-stopped
-        env_file:
-          - .env
-        environment:
-          # MQTT
-          MQTT_HOST: mqtt.julidcardenas.site
-          MQTT_PORT: 8883
-          MQTT_USER: ${MQTT_USER:-julian}
-          MQTT_PASS: ${MQTT_PASS}
-          MQTT_TOPIC: tracker/KZX003/imu/tilt
-          MQTT_TLS_INSECURE: "true"
-      
-          # Postgres (conexión por red docker)
-          PGHOST: mqtt-postgres
-          PGPORT: 5432
-          PGDATABASE: ${POSTGRES_DB}
-          PGUSER: ${POSTGRES_USER}
-          PGPASSWORD: ${POSTGRES_PASSWORD}
-      
-          DEVICE_ID: KZX003
-        depends_on:
-          - mqtt-postgres
-        networks:
-          - mqtt_net
-
+      - mqtt_net
 
 volumes:
   mqtt_pg_data:
@@ -117,3 +90,5 @@ volumes:
 networks:
   mqtt_net:
     driver: bridge
+  redinterna:
+    external: true
