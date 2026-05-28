@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/infra-backup"
-SRC="${1:-}"
-MSG="${2:-}"
+# DEFINICIÓN DE VARIABLES
+
+REPO="$HOME/infra-backup"		# Repositorio
+SRC="${1:-}"					# Source: indica a qué le quiero hacer backup
+MSG="${2:-}"					# Message: mensaje que quiero cargar en el commit
 
 if [[ -z "$SRC" ]]; then
   echo "Uso: $0 /ruta/al/archivo"
