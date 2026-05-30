@@ -40,6 +40,7 @@ services:
       retries: 5
     networks:
       - mqtt_net
+      - redinterna
 
   adminer:
     image: adminer:4
