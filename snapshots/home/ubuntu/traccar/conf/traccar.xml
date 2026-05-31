@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
+<properties>
+  <entry key='database.driver'>org.postgresql.Driver</entry>
+  <entry key='database.url'>jdbc:postgresql://traccar-postgres:5432/traccardb?useSSL=false</entry>
+  <entry key='database.user'>traccar</entry>
+  <entry key='database.password'>Aam1VP5#traccar</entry>  <!-- O clave directa -->
+  <entry key='h02.messageLength'>47</entry>
+  <entry key='h02.minMessageLength'>35</entry>
+  <entry key='osmand.port'>5055</entry>
+</properties>
