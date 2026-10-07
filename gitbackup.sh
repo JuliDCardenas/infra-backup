@@ -61,8 +61,13 @@ REAL_SRC="$(realpath -q "$SRC" || echo "$SRC")"
 # SECRET CHECK
 BASENAME="$(basename "$REAL_SRC")"
 # Bloqueo heurístico de secretos
-if [[ "$BASENAME" == .env* ]] || [[ "$BASENAME" == *.key ]] || [[ "$BASENAME" == *.pem ]] || [[ "$BASENAME" == *secret* ]] || [[ "$BASENAME" == *credential* ]]; then
+if [[ "$BASENAME" == .env* ]] || [[ "$BASENAME" == *.key ]] || [[ "$BASENAME" == *.pem ]] || [[ "$BASENAME" == *secret* ]] || [[ "$BASENAME" == *credential* ]] || [[ "$BASENAME" == "id_rsa" ]] || [[ "$BASENAME" == "id_ed25519" ]]; then
     echo "Error: El archivo $REAL_SRC parece contener secretos según su nombre. Bloqueado."
+    exit 1
+fi
+# Bloqueo de rutas sensibles (no pueden eludirse via allowlist)
+if [[ "$REAL_SRC" == */.ssh/* ]] || [[ "$REAL_SRC" == */.aws/* ]]; then
+    echo "Error: El archivo $REAL_SRC está en un directorio sensible. Bloqueado."
     exit 1
 fi
 
@@ -80,16 +85,24 @@ if [[ "$ALLOWED" -eq 0 ]]; then
     exit 1
 fi
 
+cd "$REPO" || { echo "Error: No se pudo entrar al repositorio $REPO"; exit 1; }
+REAL_REPO="$(realpath -q "$REPO")"
+
 # DESTINO
 REL="${REAL_SRC#/}"
-DST="$REPO/snapshots/$REL"
+DST="$REAL_REPO/snapshots/$REL"
+REAL_DST="$(realpath -m "$DST")" # -m resuelve, o calcula si no existe todo
+
+# Verificar escape de destino
+if [[ "$REAL_DST" != "$REAL_REPO/snapshots/"* ]]; then
+    echo "Error: El destino resuelto ($REAL_DST) escapa de $REAL_REPO/snapshots/. Probablemente debido a un symlink malicioso en la ruta destino."
+    exit 1
+fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "DRY-RUN: Origen validado: $REAL_SRC"
-    echo "DRY-RUN: Destino previsto: $DST"
+    echo "DRY-RUN: Destino seguro: $REAL_DST"
 fi
-
-cd "$REPO" || { echo "Error: No se pudo entrar al repositorio $REPO"; exit 1; }
 
 # PRE-FLIGHT GIT CHECKS
 
@@ -125,10 +138,10 @@ fi
 # BACKUP PROCESS
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
-    echo "DRY-RUN: Crearía directorio $(dirname "$DST")"
-    echo "DRY-RUN: Copiaría $REAL_SRC a $DST"
+    echo "DRY-RUN: Crearía directorio $(dirname "$REAL_DST")"
+    echo "DRY-RUN: Copiaría $REAL_SRC a $REAL_DST"
 
-    if [[ ! -f "$DST" ]] || ! cmp -s "$REAL_SRC" "$DST"; then
+    if [[ ! -f "$REAL_DST" ]] || ! cmp -s "$REAL_SRC" "$REAL_DST"; then
         echo "DRY-RUN: Archivo modificado o nuevo. Se haría git add, commit y push."
     else
         echo "DRY-RUN: Sin cambios en el archivo."
@@ -140,16 +153,21 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 fi
 
 # Aplicar copia
-mkdir -p "$(dirname "$DST")"
-cp "$REAL_SRC" "$DST" 2>/dev/null || sudo cp "$REAL_SRC" "$DST"
-# Restaurar permisos mínimos (sólo el archivo modificado)
-sudo chown "$USER:$USER" "$DST" >/dev/null 2>&1 || true
+mkdir -p "$(dirname "$REAL_DST")"
+if cp "$REAL_SRC" "$REAL_DST" 2>/dev/null; then
+    # Copia exitosa sin sudo, no requiere chown elevado
+    true
+else
+    # Fallback con sudo, y chown porque root ahora es dueño del archivo
+    sudo cp "$REAL_SRC" "$REAL_DST"
+    sudo chown "$USER:$USER" "$REAL_DST" >/dev/null 2>&1 || true
+fi
 
 # GIT COMMIT & PUSH
 CHANGED=0
-if git status --porcelain -- "$DST" | grep -q .; then
+if git status --porcelain -- "$REAL_DST" | grep -q .; then
     CHANGED=1
-    git add "$DST"
+    git add "$REAL_DST"
     if [[ -n "$MSG" ]]; then
         git commit -m "$MSG"
     else
