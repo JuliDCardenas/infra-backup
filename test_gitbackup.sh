@@ -244,9 +244,50 @@ SSH_DIR="$TEST_DIR/home/.ssh"
 mkdir -p "$SSH_DIR"
 ID_RSA="$SSH_DIR/id_rsa"
 echo "secret_key" > "$ID_RSA"
-# Añadimos la ruta a la allowlist para comprobar que el veto explícito prevalece
-sed -i "s|/etc/caddy/Caddyfile|$ID_RSA|g" "$SCRIPT"
+
+# El script ya tiene la allowlist apuntando a $CADDY_DIR/Caddyfile debido a la configuración inicial.
+# Añadimos la ruta del id_rsa a la allowlist para comprobar que el veto explícito prevalece
+sed -i "s|$CADDY_DIR/Caddyfile|$ID_RSA|g" "$SCRIPT"
 assert_failure "$SCRIPT" "$ID_RSA"
-sed -i "s|$ID_RSA|$CADDY_DIR/Caddyfile|g" "$SCRIPT"
+
+# Probar también un nombre neutro dentro de un directorio sensible
+NEUTRAL_FILE="$SSH_DIR/config.txt"
+echo "neutral_content" > "$NEUTRAL_FILE"
+sed -i "s|$ID_RSA|$NEUTRAL_FILE|g" "$SCRIPT"
+assert_failure "$SCRIPT" "$NEUTRAL_FILE"
+
+# Restaurar allowlist
+sed -i "s|$NEUTRAL_FILE|$CADDY_DIR/Caddyfile|g" "$SCRIPT"
+
+echo "[Test 17] Escape de destino interno (symlink a otro snapshot)"
+cd "$CLONE_REPO"
+# Creamos un archivo "ajeno" ya trackeado en otro snapshot
+mkdir -p snapshots/other-service
+echo "PRESERVE OTHER CONFIG" > snapshots/other-service/conf.txt
+git add snapshots/other-service/conf.txt
+git commit -m "Add other service conf" > /dev/null
+# Forzamos que el destino esperado sea un symlink que apunta al conf.txt ajeno
+mkdir -p "snapshots${CADDY_DIR}"
+rm -f "snapshots${CADDY_DIR}/Caddyfile"
+ln -s "$CLONE_REPO/snapshots/other-service/conf.txt" "snapshots${CADDY_DIR}/Caddyfile"
+
+# Intentamos respaldar (debe fallar antes de mutar)
+echo "attempt_overwrite" > "$CADDYFILE"
+assert_failure "$SCRIPT" "$CADDYFILE"
+
+# Verificamos que el archivo ajeno no se alteró
+if ! grep -q "PRESERVE OTHER CONFIG" snapshots/other-service/conf.txt; then
+    echo "FALLO: El archivo ajeno fue modificado"
+    exit 1
+fi
+rm "snapshots${CADDY_DIR}/Caddyfile"
+
+echo "[Test 18] Destino padre symlink interno/externo"
+cd "$CLONE_REPO"
+# Reemplazamos la carpeta del destino con un symlink
+rm -rf "snapshots${CADDY_DIR}"
+ln -s "$UNAUTH_DIR" "snapshots${CADDY_DIR}"
+assert_failure "$SCRIPT" "$CADDYFILE"
+rm "snapshots${CADDY_DIR}"
 
 echo "=== Todas las pruebas pasaron exitosamente ==="

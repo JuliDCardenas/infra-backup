@@ -99,6 +99,12 @@ if [[ "$REAL_DST" != "$REAL_REPO/snapshots/"* ]]; then
     exit 1
 fi
 
+# Verificar redirección de destino interno (ej. symlinks dentro de snapshots hacia otros snapshots)
+if [[ "$REAL_DST" != "$DST" ]]; then
+    echo "Error: La ruta destino ($DST) contiene symlinks y redirecciona a ($REAL_DST). Se prohíbe alterar la estructura exacta de snapshots o sobrescribir archivos ajenos."
+    exit 1
+fi
+
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "DRY-RUN: Origen validado: $REAL_SRC"
     echo "DRY-RUN: Destino seguro: $REAL_DST"
