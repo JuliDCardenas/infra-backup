@@ -1,21 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/infra-backup"
+# Wrapper para automatizar el backup de Caddyfile usando el script principal.
+# Delega las comprobaciones de seguridad, copia y Git a gitbackup.sh.
+
+REPO="${INFRA_BACKUP_REPO:-$HOME/infra-backup}"
 SRC="/etc/caddy/Caddyfile"
-DST="$REPO/caddy/Caddyfile"
+MSG="Caddyfile $(date +'%F %T')"
 
-# Copia desde /etc (requiere sudo) hacia el repo
-sudo cp "$SRC" "$DST"
-sudo chown -R "$USER:$USER" "$REPO"
-
-cd "$REPO"
-
-# Si no hay cambios, salir (evita commits basura)
-if git diff --quiet -- "$DST"; then
-  exit 0
-fi
-
-git add "$DST"
-git commit -m "Caddyfile $(date +'%F %T')"
-git push
+# Llamamos a gitbackup.sh
+"$REPO/gitbackup.sh" "$SRC" "$MSG"
