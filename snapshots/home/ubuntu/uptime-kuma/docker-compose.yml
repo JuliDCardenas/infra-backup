@@ -1,0 +1,19 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3010:3001"
+    volumes:
+      - ./uptime-kuma_data:/app/data
+    environment:
+      - TZ=America/Bogota
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      - redinterna
+
+networks:
+  redinterna:
+    external: true
